@@ -1,0 +1,52 @@
+services:
+    mysql:
+        image: 'mysql:8.0'
+        container_name: laravel_mysql
+        restart: unless-stopped
+        ports:
+            - '3306:3306'
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_DATABASE: laravel
+            MYSQL_USER: laravel
+            MYSQL_PASSWORD: secret
+            TZ: America/Sao_Paulo
+        command: '--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci'
+        volumes:
+            - 'mysql_data:/var/lib/mysql'
+        networks:
+            - laravel
+        healthcheck:
+            test:
+                - CMD
+                - mysqladmin
+                - ping
+                - '-h'
+                - localhost
+                - '-uroot'
+                - '-proot'
+            interval: 10s
+            timeout: 5s
+            retries: 5
+    phpmyadmin:
+        image: 'phpmyadmin:latest'
+        container_name: laravel_phpmyadmin
+        restart: unless-stopped
+        depends_on:
+            mysql:
+                condition: service_healthy
+        ports:
+            - '8080:80'
+        environment:
+            PMA_HOST: mysql
+            PMA_USER: root
+            PMA_PASSWORD: root
+        networks:
+            - laravel
+volumes:
+    mysql_data: null
+    sail-mysql:
+        driver: local
+networks:
+    laravel:
+        driver: bridge

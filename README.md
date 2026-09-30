@@ -1,66 +1,165 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Projeto Laravel
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplicação Laravel com banco de dados MySQL e phpMyAdmin rodando em containers Docker. O PHP e o Composer rodam direto na máquina (Windows/PowerShell), sem Laravel Sail.
 
-## About Laravel
+## Sumário
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- [Requisitos](#requisitos)
+- [Instalação](#instalação)
+- [Configuração do `.env`](#configuração-do-env)
+- [Subindo o banco de dados](#subindo-o-banco-de-dados)
+- [Rodando o projeto](#rodando-o-projeto)
+- [Acessos](#acessos)
+- [Comandos úteis](#comandos-úteis)
+- [Solução de problemas](#solução-de-problemas)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requisitos
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- [PHP](https://www.php.net/downloads) 8.2 ou superior, com a extensão `pdo_mysql` ativa
+- [Composer](https://getcomposer.org/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [Node.js](https://nodejs.org/) e npm (caso o projeto use Vite/assets)
 
-## Learning Laravel
+Para conferir se o PHP tem o driver do MySQL:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+```powershell
+php -m | findstr pdo
+```
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## Instalação
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+1. Clone o repositório e entre na pasta:
 
-## Laravel Sponsors
+```powershell
+git clone <url-do-repositorio>
+cd projetoLaravel
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+2. Instale as dependências:
 
-### Premium Partners
+```powershell
+composer install
+npm install
+```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+3. Crie o arquivo `.env` e gere a chave da aplicação:
 
-## Contributing
+```powershell
+copy .env.example .env
+php artisan key:generate
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Configuração do `.env`
 
-## Code of Conduct
+Como o PHP roda no Windows e o MySQL roda no Docker, o host do banco deve ser `127.0.0.1`. O nome `mysql` só é resolvido **dentro** da rede do Docker e causa o erro `getaddrinfo for mysql failed`.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=laravel
+DB_USERNAME=laravel
+DB_PASSWORD=secret
+```
 
-## Security Vulnerabilities
+Essas credenciais precisam bater com as definidas no `docker-compose.yml` (`MYSQL_DATABASE`, `MYSQL_USER` e `MYSQL_PASSWORD`).
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+> Use `127.0.0.1` em vez de `localhost`. No Windows, `localhost` pode resolver para IPv6 (`::1`) e a conexão falhar.
 
-## License
+## Subindo o banco de dados
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Inicie os containers em segundo plano:
+
+```powershell
+docker compose up -d
+```
+
+Verifique se o container `laravel_mysql` está com status `healthy`:
+
+```powershell
+docker compose ps
+```
+
+Na primeira execução a inicialização do MySQL pode demorar um pouco.
+
+## Rodando o projeto
+
+Com o banco no ar, limpe o cache de configuração, rode as migrations e inicie o servidor:
+
+```powershell
+php artisan config:clear
+php artisan migrate
+php artisan serve
+```
+
+Em outro terminal, se o projeto usar Vite:
+
+```powershell
+npm run dev
+```
+
+A aplicação fica disponível em `http://127.0.0.1:8000`.
+
+## Acessos
+
+| Serviço    | URL / Host              | Usuário   | Senha    |
+|------------|-------------------------|-----------|----------|
+| Aplicação  | http://127.0.0.1:8000   | -         | -        |
+| phpMyAdmin | http://localhost:8080   | `root`    | `root`   |
+| MySQL      | `127.0.0.1:3306`        | `laravel` | `secret` |
+
+> Essas credenciais são apenas para **desenvolvimento local**. Não use em produção.
+
+## Comandos úteis
+
+```powershell
+# Parar os containers (mantém os dados)
+docker compose stop
+
+# Derrubar os containers (mantém o volume com os dados)
+docker compose down
+
+# Derrubar e apagar os dados do banco
+docker compose down -v
+
+# Ver logs do MySQL
+docker compose logs -f mysql
+
+# Recriar o banco do zero e rodar as migrations
+php artisan migrate:fresh
+
+# Recriar o banco com seeders
+php artisan migrate:fresh --seed
+```
+
+## Solução de problemas
+
+**`getaddrinfo for mysql failed: Este host não é conhecido`**
+O `DB_HOST` do `.env` está como `mysql`. Troque para `127.0.0.1` e rode `php artisan config:clear`.
+
+**`Access denied for user 'laravel'`**
+As variáveis `MYSQL_USER` e `MYSQL_PASSWORD` só são aplicadas quando o volume `mysql_data` é criado pela primeira vez. Se o volume já existia, recrie-o (isso apaga os dados):
+
+```powershell
+docker compose down -v
+docker compose up -d
+```
+
+Alternativamente, crie o usuário e o banco pelo phpMyAdmin, ou use `root` / `root` no `.env`.
+
+**`could not find driver`**
+A extensão `pdo_mysql` não está ativa. Abra o `php.ini` (caminho em `php --ini`), descomente a linha `extension=pdo_mysql` e confira com `php -m | findstr pdo`.
+
+**Conexão recusada ou caindo em outro MySQL**
+Se houver um MySQL instalado no Windows (XAMPP, Laragon etc.) usando a porta 3306, ele conflita com o container. Pare o MySQL local ou altere o mapeamento de porta no `docker-compose.yml` para `'3307:3306'` e defina `DB_PORT=3307` no `.env`.
+
+**Erros continuam mesmo após alterar o `.env`**
+Limpe o cache de configuração:
+
+```powershell
+php artisan config:clear
+```
+
+## Licença
+
+Defina aqui a licença do projeto.
