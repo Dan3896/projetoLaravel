@@ -44,7 +44,7 @@ Legenda: `[x]` feito · `[~]` parcial · `[ ]` pendente
 - [x] Seeders: `StatusSeeder`, `TipoChamadoSeeder`, `ClienteSeeder`, `RoleSeeder`, `UserSeeder`
 - [ ] `PrecoClienteSeeder` com dados de teste
 - [x] Layout `layouts/main.blade.php` com `@vite` e Tailwind
-- [ ] Inicializar o Alpine.js em `resources/js/app.js` (está instalado, mas não é carregado)
+- [x] Inicializar o Alpine.js em `resources/js/app.js`
 - [ ] Remover as sobras do template de eventos: `EventController`, `resources/views/events/*`, `public/img/events`, `hdcevents_logo.svg`, `public/css/style.css` e `public/js/script.js`, se não forem usados
 
 ### Autenticação e controle de acesso
@@ -56,23 +56,24 @@ Legenda: `[x]` feito · `[~]` parcial · `[ ]` pendente
 - [ ] Editar e desativar usuários no admin
 
 ### Models Eloquent
-- [x] `Chamado`, `Cliente`, `Status`, `TipoChamado`, `User`
-- [ ] `ChamadoTriagem`, `ChamadoAnexo`, `Orcamento`, `HistoricoSla`, `PrecoCliente`
-- [ ] Relacionamentos que faltam: `Chamado` → `triagem`, `anexos`, `orcamentos`, `historicosSla`; `Cliente` → `precoCliente`, `users`
+- [x] `Chamado`, `Cliente`, `Status`, `TipoChamado`, `User`, `ChamadoTriagem`, `HistoricoSla`
+- [ ] `ChamadoAnexo`, `Orcamento`, `PrecoCliente`
+- [ ] Relacionamentos que faltam: `Chamado` → `anexos`, `orcamentos`; `Cliente` → `precoCliente`, `users`
 
 ### RF-01 — Abertura de chamado
 - [~] Formulário e `store` existem, mas:
   - [ ] o cliente é escolhido num select; o certo é pegar de `Auth::user()->cliente_id` (o admin pode escolher)
   - [ ] a validação está no controller; mover para `StoreChamadoRequest` (descrição com no mínimo 20 caracteres)
   - [ ] usar `ChamadoService` com `DB::transaction()`
-  - [ ] criar o primeiro registro em `historico_slas` com status `ABERTO`
+  - [x] criar o primeiro registro em `historico_slas` com status `ABERTO`
 - [~] Listagem (`index`): existe, mas sem filtro por cliente, sem busca e sem filtro por status
 
-### RF-02 — Assistente de triagem (matriz GUT)
-- [ ] Wizard em Alpine.js com as perguntas de Gravidade, Urgência e Tendência (1 a 5)
-- [ ] Pontuação = G × U × T (1 a 125) e badge de prioridade (Baixa ≤ 24, Média 25–60, Alta 61–99, Crítica ≥ 100)
-- [ ] Gravar em `chamado_triagens` (`TriagemService`)
-- [ ] Fila ordenada por pontuação GUT no painel do Márcio
+### RF-02 — Triagem (matriz GUT)
+Decisão de fluxo: o **cliente** informa só a urgência (`criticidade_cliente`) ao abrir; o **Márcio** faz a matriz GUT na tela de triagem (`/chamados/{id}/triagem`, só admin).
+- [x] Tela de triagem com Gravidade, Urgência e Tendência (1 a 5), pontuação ao vivo em Alpine.js
+- [x] Pontuação = G × U × T (1 a 125) e badge de prioridade (Baixa ≤ 24, Média 25–60, Alta 61–99, Crítica ≥ 100)
+- [x] Gravar em `chamado_triagens` (`TriagemService`), corrigir o tipo e escolher o próximo status (`EM_TRIAGEM`, `EM_ANALISE`, `PENDENTE_CLIENTE`, `CANCELADO`)
+- [x] Fila ordenada por pontuação GUT no painel do Márcio
 
 ### RF-03 — Anexos
 - [ ] Upload de `.png`, `.jpg`, `.jpeg`, `.pdf`, `.txt`, `.log` e `.zip`, com até 10 MB cada
@@ -89,20 +90,21 @@ Legenda: `[x]` feito · `[~]` parcial · `[ ]` pendente
 - [ ] Exportar o orçamento em PDF, com Dev, QA e Planejamento separados (jsPDF no front ou dompdf no Laravel)
 
 ### RF-05 — SLA
-- [ ] `SlaService`: grava em `historico_slas` toda vez que o status muda
-- [ ] Pausar a contagem enquanto o chamado está em `PENDENTE_CLIENTE`
-- [ ] Calcular o tempo líquido de atendimento e o prazo por tipo de chamado
-- [ ] Preencher os marcos `inicio_/fim_` de planejamento, dev e QA e o `fechado_em`
+- [x] `SlaService`: grava em `historico_slas` toda vez que o status muda
+- [x] Pausar a contagem enquanto o chamado está em `PENDENTE_CLIENTE`
+- [x] Calcular o tempo líquido de atendimento
+- [ ] Prazo de SLA (por tipo de chamado ou por prioridade) e alerta de atraso — falta o Márcio definir os prazos
+- [x] Preencher os marcos `inicio_/fim_` de planejamento, dev e QA e o `fechado_em`
 
 ### RF-06 — Detalhe do chamado e painel do Márcio
 - [~] `chamados.show` mostra os dados gerais e a descrição
-  - [ ] linha do tempo do SLA
+  - [x] linha do tempo do SLA
   - [ ] lista de anexos
-  - [ ] resumo GUT
+  - [x] resumo GUT
   - [ ] orçamento vinculado
-  - [ ] badge de status com cor por status
-- [ ] Ações do admin: trocar status, editar o chamado, cancelar
-- [ ] Dashboard: fila de chamados abertos, contagem por status e prioridade
+  - [x] badge de status com cor por status (`x-status-badge`, `x-prioridade-badge`)
+- [~] Ações do admin: trocar status e triar feitos; falta editar o chamado
+- [x] Dashboard (`/dashboard`, só admin): aguardando triagem, fila por GUT, contagem por status e prioridade
 - [ ] Cadastro de clientes (perfil + faixa de preço), com consulta da base de preços durante o atendimento
 - [ ] Histórico de chamados por cliente
 
@@ -123,8 +125,9 @@ Legenda: `[x]` feito · `[~]` parcial · `[ ]` pendente
 
 ### Testes
 - [x] Acesso à tela admin
-- [ ] `tests/Feature/ChamadoTest.php`: abertura com sucesso, cálculo GUT, validação de anexos, isolamento entre clientes
-- [ ] Testes do cálculo de orçamento e do SLA (com pausa)
+- [x] Triagem, SLA (com pausa) e painel (`tests/Feature/TriagemSlaTest.php`)
+- [ ] `tests/Feature/ChamadoTest.php`: validação de anexos, isolamento entre clientes
+- [ ] Testes do cálculo de orçamento
 
 ---
 

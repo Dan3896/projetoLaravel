@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Chamado extends Model
 {
@@ -47,5 +49,20 @@ class Chamado extends Model
     public function tipoChamado(): BelongsTo
     {
         return $this->belongsTo(TipoChamado::class, 'tipo_chamado_id');
+    }
+
+    public function triagem(): HasOne
+    {
+        return $this->hasOne(ChamadoTriagem::class);
+    }
+
+    public function historicosSla(): HasMany
+    {
+        return $this->hasMany(HistoricoSla::class)->orderBy('registrado_em')->orderBy('id');
+    }
+
+    public function estaEncerrado(): bool
+    {
+        return in_array($this->status->descricao, Status::ENCERRADOS, true);
     }
 }
