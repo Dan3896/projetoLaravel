@@ -3,6 +3,9 @@
         <a href="/chamados" class="text-xl font-bold text-blue-600">OiCram OS</a>
         <ul class="flex space-x-4 items-center">
             @auth
+                @role('admin')
+                    <li><a href="{{ route('dashboard') }}" class="text-gray-600 hover:text-blue-600">Painel</a></li>
+                @endrole
                 <li><a href="/chamados" class="text-gray-600 hover:text-blue-600">Listar OS</a></li>
                 <li><a href="/chamados/create" class="text-gray-600 hover:text-blue-600">Nova OS</a></li>
                 @role('admin')

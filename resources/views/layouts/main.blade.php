@@ -17,6 +17,12 @@
                 </div>
             @endif
 
+            @if(session('error'))
+                <div class="mb-4 px-4 py-3 bg-red-100 text-red-700 border border-red-400 rounded">
+                    {{ session('error') }}
+                </div>
+            @endif
+
             @yield('content')
         </main>
 

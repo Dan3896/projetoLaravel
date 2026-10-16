@@ -6,13 +6,15 @@ use App\Models\Chamado;
 use App\Models\Cliente;
 use App\Models\Status;
 use App\Models\TipoChamado;
+use App\Services\SlaService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ChamadoController extends Controller
 {
     public function index()
     {
-        $chamados = Chamado::with(['cliente', 'status', 'tipoChamado'])->latest()->get();
+        $chamados = Chamado::with(['cliente', 'status', 'tipoChamado', 'triagem'])->latest()->get();
         return view('chamados.index', compact('chamados'));
     }
 
@@ -25,7 +27,7 @@ class ChamadoController extends Controller
         return view('chamados.create', compact('clientes', 'tipos', 'statusAberto'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request, SlaService $sla)
     {
         $validated = $request->validate([
             'cliente_id' => 'required|exists:clientes,id',
@@ -36,21 +38,28 @@ class ChamadoController extends Controller
 
         $statusAberto = Status::where('descricao', 'ABERTO')->first();
 
-        Chamado::create([
-            'cliente_id' => $validated['cliente_id'],
-            'tipo_chamado_id' => $validated['tipo_chamado_id'],
-            'status_id' => $statusAberto->id,
-            'descricao' => $validated['descricao'],
-            'criticidade_cliente' => $validated['criticidade_cliente'],
-            'aberto_em' => now(),
-        ]);
+        DB::transaction(function () use ($validated, $statusAberto, $sla) {
+            $chamado = Chamado::create([
+                'cliente_id' => $validated['cliente_id'],
+                'tipo_chamado_id' => $validated['tipo_chamado_id'],
+                'status_id' => $statusAberto->id,
+                'descricao' => $validated['descricao'],
+                'criticidade_cliente' => $validated['criticidade_cliente'],
+                'aberto_em' => now(),
+            ]);
+
+            $sla->registrarAbertura($chamado);
+        });
 
         return redirect()->route('chamados.index')->with('success', 'Chamado/OS aberto com sucesso!');
     }
 
-    public function show(Chamado $chamado)
+    public function show(Chamado $chamado, SlaService $sla)
     {
-        $chamado->load(['cliente', 'status', 'tipoChamado']);
-        return view('chamados.show', compact('chamado'));
+        $chamado->load(['cliente', 'status', 'tipoChamado', 'triagem', 'historicosSla.status']);
+        $tempoSla = $sla->calcular($chamado);
+        $statuses = Status::orderBy('id')->get();
+
+        return view('chamados.show', compact('chamado', 'tempoSla', 'statuses'));
     }
 }
