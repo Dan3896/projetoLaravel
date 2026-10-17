@@ -3,6 +3,10 @@
 @section('title', 'Lista de Ordens de Serviço')
 
 @section('content')
+@php
+    $isAdmin = auth()->user()->isAdmin();
+@endphp
+
 <div class="bg-white p-6 rounded-lg shadow">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-gray-800">Ordens de Serviço</h1>
@@ -19,10 +23,15 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                        @if($isAdmin)
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
+                        @endif
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prioridade</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Etapa</th>
+                        @if($isAdmin)
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prioridade</th>
+                        @endif
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
                     </tr>
@@ -31,18 +40,29 @@
                     @foreach($chamados as $chamado)
                         <tr class="hover:bg-gray-50 transition">
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#{{ $chamado->id }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                                {{ $chamado->cliente->nome_empresa }}
-                            </td>
+                            @if($isAdmin)
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                                    {{ $chamado->cliente->nome_empresa }}
+                                </td>
+                            @endif
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {{ $chamado->tipoChamado->descricao }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                <x-status-badge :status="$chamado->status->descricao" />
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                @if($chamado->status->descricao === 'CANCELADO')
+                                    <span class="font-semibold text-red-700">Cancelado</span>
+                                @else
+                                    {{ $chamado->etapa?->nome ?? '-' }}
+                                @endif
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                <x-prioridade-badge :triagem="$chamado->triagem" />
-                            </td>
+                            @if($isAdmin)
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <x-status-badge :status="$chamado->status->descricao" />
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <x-prioridade-badge :triagem="$chamado->triagem" />
+                                </td>
+                            @endif
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {{ $chamado->aberto_em->format('d/m/Y H:i') }}
                             </td>

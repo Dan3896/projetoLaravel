@@ -16,4 +16,9 @@ class Cliente extends Model
     {
         return $this->hasMany(Chamado::class);
     }
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
 }

@@ -1,7 +1,7 @@
 <header class="bg-white shadow">
-    <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+    <nav class="container mx-auto px-6 py-4 flex flex-wrap justify-between items-center gap-3">
         <a href="/chamados" class="text-xl font-bold text-blue-600">OiCram OS</a>
-        <ul class="flex space-x-4 items-center">
+        <ul class="flex flex-wrap gap-x-4 gap-y-2 items-center">
             @auth
                 @role('admin')
                     <li><a href="{{ route('dashboard') }}" class="text-gray-600 hover:text-blue-600">Painel</a></li>
@@ -9,6 +9,8 @@
                 <li><a href="/chamados" class="text-gray-600 hover:text-blue-600">Listar OS</a></li>
                 <li><a href="/chamados/create" class="text-gray-600 hover:text-blue-600">Nova OS</a></li>
                 @role('admin')
+                    <li><a href="{{ route('admin.empresas.index') }}" class="text-gray-600 hover:text-blue-600">Empresas</a></li>
+                    <li><a href="{{ route('admin.etapas.index') }}" class="text-gray-600 hover:text-blue-600">Etapas</a></li>
                     <li><a href="{{ route('admin.usuarios.index') }}" class="text-gray-600 hover:text-blue-600">Usuários</a></li>
                 @endrole
                 <li>

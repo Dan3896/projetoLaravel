@@ -87,7 +87,7 @@ class TriagemSlaTest extends TestCase
         $this->assertCount(1, $chamado->historicosSla);
         $this->assertSame('ABERTO', $chamado->historicosSla->first()->status->descricao);
 
-        $this->get('/chamados')->assertOk()->assertSee('Não triado');
+        $this->actingAs($this->usuario('admin'))->get('/chamados')->assertOk()->assertSee('Não triado');
     }
 
     public function test_cliente_nao_acessa_triagem_nem_painel(): void

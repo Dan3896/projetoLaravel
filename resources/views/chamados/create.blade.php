@@ -19,17 +19,24 @@
     <form action="{{ route('chamados.store') }}" method="POST">
         @csrf
         
-        <div class="mb-4">
-            <label for="cliente_id" class="block text-gray-700 font-medium mb-2">Cliente</label>
-            <select name="cliente_id" id="cliente_id" class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2 bg-white" required>
-                <option value="">Selecione um cliente...</option>
-                @foreach($clientes as $cliente)
-                    <option value="{{ $cliente->id }}" {{ old('cliente_id') == $cliente->id ? 'selected' : '' }}>
-                        {{ $cliente->nome_empresa }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
+        @if(auth()->user()->isAdmin())
+            <div class="mb-4">
+                <label for="cliente_id" class="block text-gray-700 font-medium mb-2">Empresa</label>
+                <select name="cliente_id" id="cliente_id" class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2 bg-white" required>
+                    <option value="">Selecione uma empresa...</option>
+                    @foreach($clientes as $cliente)
+                        <option value="{{ $cliente->id }}" {{ old('cliente_id') == $cliente->id ? 'selected' : '' }}>
+                            {{ $cliente->nome_empresa }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+        @else
+            <div class="mb-4">
+                <span class="block text-gray-700 font-medium mb-2">Empresa</span>
+                <p class="text-gray-900">{{ auth()->user()->cliente->nome_empresa }}</p>
+            </div>
+        @endif
 
         <div class="mb-4">
             <label for="tipo_chamado_id" class="block text-gray-700 font-medium mb-2">Tipo de Solicitação</label>
