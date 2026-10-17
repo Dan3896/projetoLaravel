@@ -12,6 +12,7 @@ class Chamado extends Model
     protected $fillable = [
         'cliente_id',
         'status_id',
+        'etapa_id',
         'tipo_chamado_id',
         'descricao',
         'criticidade_cliente',
@@ -49,6 +50,16 @@ class Chamado extends Model
     public function tipoChamado(): BelongsTo
     {
         return $this->belongsTo(TipoChamado::class, 'tipo_chamado_id');
+    }
+
+    public function etapa(): BelongsTo
+    {
+        return $this->belongsTo(Etapa::class);
+    }
+
+    public function historicosInternos(): HasMany
+    {
+        return $this->hasMany(ChamadoHistoricoInterno::class)->latest()->orderByDesc('id');
     }
 
     public function triagem(): HasOne

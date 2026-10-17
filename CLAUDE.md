@@ -40,8 +40,8 @@ Legenda: `[x]` feito · `[~]` parcial · `[ ]` pendente
 
 ### Infraestrutura e base
 - [x] Docker com MySQL + phpMyAdmin e README de instalação
-- [x] Migrations: `status`, `clientes`, `tipo_chamados`, `preco_clientes`, `chamados`, `chamado_triagens`, `chamado_anexos`, `orcamentos`, `historico_slas`, `users`, `cache`, tabelas de permissão
-- [x] Seeders: `StatusSeeder`, `TipoChamadoSeeder`, `ClienteSeeder`, `RoleSeeder`, `UserSeeder`
+- [x] Migrations: `status`, `clientes`, `tipo_chamados`, `preco_clientes`, `chamados`, `chamado_triagens`, `chamado_anexos`, `orcamentos`, `historico_slas`, `users`, `cache`, tabelas de permissão, `etapas` (+ `chamados.etapa_id`), `chamado_historicos_internos`
+- [x] Seeders: `StatusSeeder`, `EtapaSeeder`, `TipoChamadoSeeder`, `ClienteSeeder`, `RoleSeeder`, `UserSeeder`
 - [ ] `PrecoClienteSeeder` com dados de teste
 - [x] Layout `layouts/main.blade.php` com `@vite` e Tailwind
 - [x] Inicializar o Alpine.js em `resources/js/app.js`
@@ -52,21 +52,21 @@ Legenda: `[x]` feito · `[~]` parcial · `[ ]` pendente
 - [x] Papéis `admin` e `cliente` (spatie)
 - [x] Tela admin para listar e criar usuários cliente (`/admin/usuarios`)
 - [x] Teste de acesso à tela admin (`tests/Feature/AdminUsuariosAccessTest.php`)
-- [ ] `ChamadoPolicy`: o cliente só vê os chamados do próprio `cliente_id`; o admin vê todos
-- [ ] Editar e desativar usuários no admin
+- [x] `ChamadoPolicy`: o cliente só vê (e só cancela) os chamados da própria empresa (`cliente_id`); o admin vê todos
+- [~] Editar usuários no admin, inclusive trocar a empresa (feito); desativar (pendente)
 
 ### Models Eloquent
-- [x] `Chamado`, `Cliente`, `Status`, `TipoChamado`, `User`, `ChamadoTriagem`, `HistoricoSla`
+- [x] `Chamado`, `Cliente`, `Status`, `TipoChamado`, `User`, `ChamadoTriagem`, `HistoricoSla`, `Etapa`, `ChamadoHistoricoInterno`
 - [ ] `ChamadoAnexo`, `Orcamento`, `PrecoCliente`
-- [ ] Relacionamentos que faltam: `Chamado` → `anexos`, `orcamentos`; `Cliente` → `precoCliente`, `users`
+- [ ] Relacionamentos que faltam: `Chamado` → `anexos`, `orcamentos`; `Cliente` → `precoCliente`
 
 ### RF-01 — Abertura de chamado
 - [~] Formulário e `store` existem, mas:
-  - [ ] o cliente é escolhido num select; o certo é pegar de `Auth::user()->cliente_id` (o admin pode escolher)
-  - [ ] a validação está no controller; mover para `StoreChamadoRequest` (descrição com no mínimo 20 caracteres)
-  - [ ] usar `ChamadoService` com `DB::transaction()`
+  - [x] o cliente abre sempre para a própria empresa (`Auth::user()->cliente_id`); só o admin escolhe a empresa
+  - [~] validação em `StoreChamadoRequest` (feito); a descrição ainda exige 10 caracteres, a spec pede 20
+  - [x] usar `ChamadoService` com `DB::transaction()` (o chamado começa na primeira etapa)
   - [x] criar o primeiro registro em `historico_slas` com status `ABERTO`
-- [~] Listagem (`index`): existe, mas sem filtro por cliente, sem busca e sem filtro por status
+- [~] Listagem (`index`): o cliente vê só a própria empresa; faltam busca e filtro por status
 
 ### RF-02 — Triagem (matriz GUT)
 Decisão de fluxo: o **cliente** informa só a urgência (`criticidade_cliente`) ao abrir; o **Márcio** faz a matriz GUT na tela de triagem (`/chamados/{id}/triagem`, só admin).
@@ -74,6 +74,13 @@ Decisão de fluxo: o **cliente** informa só a urgência (`criticidade_cliente`)
 - [x] Pontuação = G × U × T (1 a 125) e badge de prioridade (Baixa ≤ 24, Média 25–60, Alta 61–99, Crítica ≥ 100)
 - [x] Gravar em `chamado_triagens` (`TriagemService`), corrigir o tipo e escolher o próximo status (`EM_TRIAGEM`, `EM_ANALISE`, `PENDENTE_CLIENTE`, `CANCELADO`)
 - [x] Fila ordenada por pontuação GUT no painel do Márcio
+
+### Reunião de 16/10/2026 — empresa, etapas, histórico interno e cancelamento
+- [x] Cliente vinculado a uma empresa; vê e cancela só os chamados dela
+- [x] Etapas visíveis ao cliente (Recebido, Triagem, Em andamento...), cadastradas pelo Márcio em `/admin/etapas` e escolhidas num select no chamado. São separadas do status interno, que continua controlando o SLA
+- [x] Andamento "etapa x/y" com barra de progresso no detalhe do chamado
+- [x] Aba "Histórico interno" no chamado (só admin), com anotações livres e registro automático de troca de etapa e cancelamento
+- [x] Cancelar ordem (cliente ou admin), com motivo opcional
 
 ### RF-03 — Anexos
 - [ ] Upload de `.png`, `.jpg`, `.jpeg`, `.pdf`, `.txt`, `.log` e `.zip`, com até 10 MB cada
@@ -105,7 +112,7 @@ Decisão de fluxo: o **cliente** informa só a urgência (`criticidade_cliente`)
   - [x] badge de status com cor por status (`x-status-badge`, `x-prioridade-badge`)
 - [~] Ações do admin: trocar status e triar feitos; falta editar o chamado
 - [x] Dashboard (`/dashboard`, só admin): aguardando triagem, fila por GUT, contagem por status e prioridade
-- [ ] Cadastro de clientes (perfil + faixa de preço), com consulta da base de preços durante o atendimento
+- [~] Cadastro de empresas (`/admin/empresas`, nome + perfil) feito; falta a faixa de preço e a consulta durante o atendimento
 - [ ] Histórico de chamados por cliente
 
 ### Bot de triagem (problema 1 e diferencial do projeto)
@@ -126,7 +133,8 @@ Decisão de fluxo: o **cliente** informa só a urgência (`criticidade_cliente`)
 ### Testes
 - [x] Acesso à tela admin
 - [x] Triagem, SLA (com pausa) e painel (`tests/Feature/TriagemSlaTest.php`)
-- [ ] `tests/Feature/ChamadoTest.php`: validação de anexos, isolamento entre clientes
+- [x] Empresas, etapas, histórico interno, cancelamento e isolamento entre empresas (`tests/Feature/EmpresaEtapaHistoricoTest.php`)
+- [ ] Validação de anexos
 - [ ] Testes do cálculo de orçamento
 
 ---

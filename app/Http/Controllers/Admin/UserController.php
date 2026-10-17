@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdateUsuarioRequest;
 use App\Models\Cliente;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -38,5 +39,27 @@ class UserController extends Controller
         return redirect()
             ->route('admin.usuarios.index')
             ->with('success', "Usuário {$usuario->name} criado com sucesso.");
+    }
+
+    public function edit(User $usuario)
+    {
+        $clientes = Cliente::orderBy('nome_empresa')->get();
+
+        return view('admin.usuarios.edit', compact('usuario', 'clientes'));
+    }
+
+    public function update(UpdateUsuarioRequest $request, User $usuario)
+    {
+        $dados = $request->validated();
+
+        if (empty($dados['password'])) {
+            unset($dados['password']);
+        }
+
+        $usuario->update($dados);
+
+        return redirect()
+            ->route('admin.usuarios.index')
+            ->with('success', "Usuário {$usuario->name} atualizado.");
     }
 }
