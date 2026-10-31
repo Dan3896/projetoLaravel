@@ -40,12 +40,11 @@ Legenda: `[x]` feito · `[~]` parcial · `[ ]` pendente
 
 ### Infraestrutura e base
 - [x] Docker com MySQL + phpMyAdmin e README de instalação
-- [x] Migrations: `status`, `clientes`, `tipo_chamados`, `preco_clientes`, `chamados`, `chamado_triagens`, `chamado_anexos`, `orcamentos`, `historico_slas`, `users`, `cache`, tabelas de permissão, `etapas` (+ `chamados.etapa_id`), `chamado_historicos_internos`
-- [x] Seeders: `StatusSeeder`, `EtapaSeeder`, `TipoChamadoSeeder`, `ClienteSeeder`, `RoleSeeder`, `UserSeeder`
-- [ ] `PrecoClienteSeeder` com dados de teste
+- [x] Migrations: `status`, `clientes`, `tipo_chamados`, `preco_clientes`, `chamados`, `chamado_triagens`, `chamado_anexos`, `orcamentos`, `historico_slas`, `users`, `cache`, tabelas de permissão, `etapas` (+ `chamados.etapa_id`), `chamado_historicos_internos`, `prazos_sla`; horas estimadas em `tipo_chamados`, detalhamento e status em `orcamentos`, `users.ativo`
+- [x] Seeders: `StatusSeeder`, `EtapaSeeder`, `TipoChamadoSeeder` (com horas estimadas), `ClienteSeeder`, `PrecoClienteSeeder`, `PrazoSlaSeeder`, `RoleSeeder`, `UserSeeder`
 - [x] Layout `layouts/main.blade.php` com `@vite` e Tailwind
 - [x] Inicializar o Alpine.js em `resources/js/app.js`
-- [ ] Remover as sobras do template de eventos: `EventController`, `resources/views/events/*`, `public/img/events`, `hdcevents_logo.svg`, `public/css/style.css` e `public/js/script.js`, se não forem usados
+- [x] Remover as sobras do template de eventos (`EventController`, `events/*`, `welcome.blade.php`, `public/img`, `public/css/style.css`, `public/js/script.js`)
 
 ### Autenticação e controle de acesso
 - [x] Login e logout (`AuthController`)
@@ -53,20 +52,19 @@ Legenda: `[x]` feito · `[~]` parcial · `[ ]` pendente
 - [x] Tela admin para listar e criar usuários cliente (`/admin/usuarios`)
 - [x] Teste de acesso à tela admin (`tests/Feature/AdminUsuariosAccessTest.php`)
 - [x] `ChamadoPolicy`: o cliente só vê (e só cancela) os chamados da própria empresa (`cliente_id`); o admin vê todos
-- [~] Editar usuários no admin, inclusive trocar a empresa (feito); desativar (pendente)
+- [x] Editar usuários no admin (inclusive trocar a empresa) e desativar/reativar o acesso (`users.ativo`; o login e as sessões abertas são bloqueados)
 
 ### Models Eloquent
-- [x] `Chamado`, `Cliente`, `Status`, `TipoChamado`, `User`, `ChamadoTriagem`, `HistoricoSla`, `Etapa`, `ChamadoHistoricoInterno`
-- [ ] `ChamadoAnexo`, `Orcamento`, `PrecoCliente`
-- [ ] Relacionamentos que faltam: `Chamado` → `anexos`, `orcamentos`; `Cliente` → `precoCliente`
+- [x] `Chamado`, `Cliente`, `Status`, `TipoChamado`, `User`, `ChamadoTriagem`, `HistoricoSla`, `Etapa`, `ChamadoHistoricoInterno`, `ChamadoAnexo`, `Orcamento`, `PrecoCliente`, `PrazoSla`
+- [x] Relacionamentos: `Chamado` → `anexos`, `orcamentos`, `orcamento` (vigente); `Cliente` → `precoCliente`, `users`
 
 ### RF-01 — Abertura de chamado
-- [~] Formulário e `store` existem, mas:
+- [x] Formulário e `store`:
   - [x] o cliente abre sempre para a própria empresa (`Auth::user()->cliente_id`); só o admin escolhe a empresa
-  - [~] validação em `StoreChamadoRequest` (feito); a descrição ainda exige 10 caracteres, a spec pede 20
+  - [x] validação em `StoreChamadoRequest`, com descrição de no mínimo 20 caracteres e anexos
   - [x] usar `ChamadoService` com `DB::transaction()` (o chamado começa na primeira etapa)
   - [x] criar o primeiro registro em `historico_slas` com status `ABERTO`
-- [~] Listagem (`index`): o cliente vê só a própria empresa; faltam busca e filtro por status
+- [x] Listagem (`index`): o cliente vê só a própria empresa; busca (nº, descrição, empresa), filtros por empresa/status/etapa e paginação
 
 ### RF-02 — Triagem (matriz GUT)
 Decisão de fluxo: o **cliente** informa só a urgência (`criticidade_cliente`) ao abrir; o **Márcio** faz a matriz GUT na tela de triagem (`/chamados/{id}/triagem`, só admin).
@@ -83,50 +81,50 @@ Decisão de fluxo: o **cliente** informa só a urgência (`criticidade_cliente`)
 - [x] Cancelar ordem (cliente ou admin), com motivo opcional
 
 ### RF-03 — Anexos
-- [ ] Upload de `.png`, `.jpg`, `.jpeg`, `.pdf`, `.txt`, `.log` e `.zip`, com até 10 MB cada
-- [ ] Gravar em `storage/app/public/chamados/{id}` e registrar em `chamado_anexos`
-- [ ] Download seguro, respeitando a policy
+- [x] Upload de `.png`, `.jpg`, `.jpeg`, `.pdf`, `.txt`, `.log` e `.zip`, com até 10 MB cada (até 5 por envio), na abertura e depois
+- [x] Gravar em `chamados/{id}` no disco **privado** (`storage/app/private`, não no `public`, para o arquivo não ficar acessível por link) e registrar em `chamado_anexos`
+- [x] Download seguro, respeitando a policy; só o admin exclui
 
 ### RF-04 — Pré-orçamento automático (problema 2)
-- [ ] Catálogo de horas estimadas por tipo de chamado, separadas em desenvolvimento, QA e planejamento (precisa de tabela/migration nova)
-- [ ] Faixa de preço por cliente (`preco_clientes`), com CRUD no admin
-- [ ] `OrcamentoService`: cria o orçamento ao abrir o chamado (horas × valor_hora por componente)
-- [ ] Guardar o detalhamento por componente (hoje `orcamentos` só tem `valor_total`)
-- [ ] Tela para o Márcio ajustar os valores antes de enviar
-- [ ] Status do orçamento: pendente, enviado, aprovado, recusado
-- [ ] Exportar o orçamento em PDF, com Dev, QA e Planejamento separados (jsPDF no front ou dompdf no Laravel)
+- [x] Catálogo de horas estimadas por tipo de chamado (planejamento, desenvolvimento e QA), editável em `/admin/tipos-chamado`
+- [x] Faixa de preço por empresa (`preco_clientes.valor_hora`), no cadastro de empresas
+- [x] `OrcamentoService`: cria o pré-orçamento ao abrir o chamado (horas × valor_hora por componente) quando a empresa tem valor-hora; o admin também cria manualmente
+- [x] Detalhamento por componente guardado em `orcamentos`
+- [x] Tela para o Márcio ajustar os valores antes de enviar
+- [x] Status do orçamento: pendente, enviado, aprovado, recusado. O cliente só vê depois de enviado e aprova ou recusa (com motivo); aprovar move o chamado para `APROVADO`
+- [x] Exportar o orçamento em PDF com Dev, QA e Planejamento separados (`barryvdh/laravel-dompdf`)
 
 ### RF-05 — SLA
 - [x] `SlaService`: grava em `historico_slas` toda vez que o status muda
 - [x] Pausar a contagem enquanto o chamado está em `PENDENTE_CLIENTE`
 - [x] Calcular o tempo líquido de atendimento
-- [ ] Prazo de SLA (por tipo de chamado ou por prioridade) e alerta de atraso — falta o Márcio definir os prazos
+- [x] Prazo de SLA por prioridade GUT (`/admin/prazos-sla`) e alerta de atraso no detalhe e no painel. Os valores iniciais (4h/8h/24h/72h) são sugestões: **o Márcio precisa confirmar**
 - [x] Preencher os marcos `inicio_/fim_` de planejamento, dev e QA e o `fechado_em`
 
 ### RF-06 — Detalhe do chamado e painel do Márcio
-- [~] `chamados.show` mostra os dados gerais e a descrição
+- [x] `chamados.show` mostra os dados gerais e a descrição
   - [x] linha do tempo do SLA
-  - [ ] lista de anexos
+  - [x] lista de anexos
   - [x] resumo GUT
-  - [ ] orçamento vinculado
+  - [x] orçamento vinculado
   - [x] badge de status com cor por status (`x-status-badge`, `x-prioridade-badge`)
-- [~] Ações do admin: trocar status e triar feitos; falta editar o chamado
+- [x] Ações do admin: trocar status, triar, editar o chamado e cancelar
 - [x] Dashboard (`/dashboard`, só admin): aguardando triagem, fila por GUT, contagem por status e prioridade
-- [~] Cadastro de empresas (`/admin/empresas`, nome + perfil) feito; falta a faixa de preço e a consulta durante o atendimento
-- [ ] Histórico de chamados por cliente
+- [x] Cadastro de empresas (`/admin/empresas`, nome, perfil e valor-hora), com o valor-hora visível no detalhe do chamado durante o atendimento
+- [x] Histórico de chamados por empresa (link na lista de empresas, que abre a listagem filtrada)
 
 ### Bot de triagem (problema 1 e diferencial do projeto)
 - [ ] Serviço Node (Fastify) para o bot de triagem
 - [ ] NLP.js para classificar a intenção e o tipo de chamado a partir do texto do cliente
 - [ ] Chat em tempo real no site (Socket.io)
-- [ ] Endpoint de API no Laravel para o bot criar o chamado já triado (com autenticação entre os serviços)
-- [ ] Gravar a conversa do bot como histórico do atendimento no chamado
+- [x] Endpoint de API no Laravel para o bot: `GET /api/bot/tipos-chamado` e `POST /api/bot/chamados`, com token em `BOT_TRIAGEM_TOKEN` (`Authorization: Bearer`)
+- [x] Gravar a conversa do bot no histórico interno do chamado
 
 ### Requisitos não funcionais
 - [x] `@csrf` nos formulários e rotas protegidas com `auth`
 - [ ] Layout responsivo (mobile-first) revisado em todas as telas
-- [ ] Bloquear upload de executáveis (`.php`, `.sh`, `.exe`)
-- [ ] Rollback completo se a gravação de anexos ou da triagem falhar
+- [x] Bloquear upload de executáveis (`.php`, `.sh`, `.exe`): só as extensões e tipos MIME da lista passam
+- [x] Rollback completo se a gravação de anexos ou do orçamento falhar (a transação desfaz o banco e os arquivos gravados são apagados)
 - [ ] Proteção de dados conforme a LGPD (tarefa do Rafael, etapa 5)
 - [ ] Deploy em produção/homologação com HTTPS
 
@@ -134,8 +132,7 @@ Decisão de fluxo: o **cliente** informa só a urgência (`criticidade_cliente`)
 - [x] Acesso à tela admin
 - [x] Triagem, SLA (com pausa) e painel (`tests/Feature/TriagemSlaTest.php`)
 - [x] Empresas, etapas, histórico interno, cancelamento e isolamento entre empresas (`tests/Feature/EmpresaEtapaHistoricoTest.php`)
-- [ ] Validação de anexos
-- [ ] Testes do cálculo de orçamento
+- [x] Anexos, orçamento, prazo de SLA, desativação de usuário, edição, listagem e API do bot (`tests/Feature/AnexoOrcamentoPrazoTest.php`)
 
 ---
 

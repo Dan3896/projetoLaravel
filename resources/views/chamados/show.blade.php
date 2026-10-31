@@ -16,6 +16,9 @@
                 <x-button href="{{ route('chamados.triagem.create', $chamado) }}">
                     {{ $chamado->triagem ? 'Refazer triagem' : 'Triar' }}
                 </x-button>
+                <a href="{{ route('chamados.edit', $chamado) }}" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 transition">
+                    Editar
+                </a>
             @endif
             <a href="{{ route('chamados.index') }}" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition">
                 &larr; Voltar
@@ -81,6 +84,19 @@
                         <p class="text-gray-900">{{ $chamado->fechado_em->format('d/m/Y H:i') }}</p>
                     </div>
                 @endif
+                @if($isAdmin)
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-500 uppercase">Valor-hora da empresa</h3>
+                        <p class="text-gray-900">
+                            @if($chamado->cliente->precoCliente)
+                                {{ \App\Models\Orcamento::formatarMoeda($chamado->cliente->precoCliente->valor_hora) }}
+                            @else
+                                Não cadastrado ·
+                                <a href="{{ route('admin.empresas.edit', $chamado->cliente) }}" class="text-indigo-600 hover:text-indigo-900">cadastrar</a>
+                            @endif
+                        </p>
+                    </div>
+                @endif
             </div>
 
             <div class="border-t border-gray-200 pt-6">
@@ -128,6 +144,23 @@
                             <dd class="text-xl font-bold">{{ \App\Services\SlaService::formatarDuracao($tempoSla['pausado']) }}</dd>
                         </div>
                     </dl>
+                    @if($prazo)
+                        <p class="mt-3 text-sm font-medium {{ $prazo['atrasado'] ? 'text-red-700' : 'text-green-700' }}">
+                            Prazo de {{ $prazo['horas'] }}h ({{ $chamado->triagem->prioridade() }}):
+                            @if($prazo['atrasado'])
+                                atrasado há {{ \App\Services\SlaService::formatarDuracao(-$prazo['restante']) }}
+                            @else
+                                restam {{ \App\Services\SlaService::formatarDuracao($prazo['restante']) }}
+                            @endif
+                        </p>
+                    @elseif($chamado->triagem)
+                        <p class="mt-3 text-sm text-gray-500">
+                            Sem prazo para a prioridade {{ $chamado->triagem->prioridade() }} ·
+                            <a href="{{ route('admin.prazos-sla.edit') }}" class="text-indigo-600 hover:text-indigo-900">configurar prazos</a>
+                        </p>
+                    @else
+                        <p class="mt-3 text-sm text-gray-500">O prazo começa a valer depois da triagem.</p>
+                    @endif
                     <p class="text-xs text-gray-500 mt-2">O tempo em "Pendente cliente" não conta no atendimento.</p>
                 </div>
             </div>
@@ -186,6 +219,9 @@
                 @endif
             </div>
         @endif
+
+        @include('chamados.partials.orcamento')
+        @include('chamados.partials.anexos')
 
         @can('cancelar', $chamado)
             <details class="bg-white p-6 rounded-lg shadow">

@@ -22,6 +22,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Papel</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acesso</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
                     </tr>
                 </thead>
@@ -36,8 +37,25 @@
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $usuario->cliente?->nome_empresa ?? '-' }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                @if($usuario->ativo)
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Ativo</span>
+                                @else
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-200 text-gray-700">Desativado</span>
+                                @endif
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <a href="{{ route('admin.usuarios.edit', $usuario) }}" class="text-indigo-600 hover:text-indigo-900">Editar</a>
+                                @unless($usuario->is(auth()->user()))
+                                    <form action="{{ route('admin.usuarios.ativo', $usuario) }}" method="POST" class="inline ml-3"
+                                          onsubmit="return confirm(@js(($usuario->ativo ? 'Desativar o acesso de ' : 'Reativar o acesso de ') . $usuario->name . '?'));">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="{{ $usuario->ativo ? 'text-red-600 hover:text-red-800' : 'text-green-700 hover:text-green-900' }}">
+                                            {{ $usuario->ativo ? 'Desativar' : 'Reativar' }}
+                                        </button>
+                                    </form>
+                                @endunless
                             </td>
                         </tr>
                     @endforeach

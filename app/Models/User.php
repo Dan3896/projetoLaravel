@@ -23,6 +23,12 @@ class User extends Authenticatable
         'email',
         'password',
         'cliente_id',
+        'ativo',
+    ];
+
+    // Igual ao default da coluna, para o model recém-criado já sair ativo sem recarregar do banco.
+    protected $attributes = [
+        'ativo' => true,
     ];
 
     public function cliente()
@@ -55,6 +61,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'ativo' => 'boolean',
         ];
     }
 }

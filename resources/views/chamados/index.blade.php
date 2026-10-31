@@ -8,10 +8,41 @@
 @endphp
 
 <div class="bg-white p-6 rounded-lg shadow">
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex flex-wrap justify-between items-center gap-3 mb-6">
         <h1 class="text-2xl font-bold text-gray-800">Ordens de Serviço</h1>
         <x-button href="{{ route('chamados.create') }}">+ Nova OS</x-button>
     </div>
+
+    <form method="GET" action="{{ route('chamados.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+        <input type="search" name="busca" value="{{ $filtros['busca'] ?? '' }}" placeholder="Buscar por nº, descrição{{ $isAdmin ? ' ou empresa' : '' }}"
+               class="border border-gray-300 rounded-md p-2 lg:col-span-2">
+        @if($isAdmin)
+            <select name="empresa" class="border border-gray-300 rounded-md p-2 bg-white">
+                <option value="">Todas as empresas</option>
+                @foreach($empresas as $empresa)
+                    <option value="{{ $empresa->id }}" @selected(($filtros['empresa'] ?? '') == $empresa->id)>{{ $empresa->nome_empresa }}</option>
+                @endforeach
+            </select>
+            <select name="status" class="border border-gray-300 rounded-md p-2 bg-white">
+                <option value="">Todos os status</option>
+                @foreach($statuses as $status)
+                    <option value="{{ $status->id }}" @selected(($filtros['status'] ?? '') == $status->id)>{{ str_replace('_', ' ', $status->descricao) }}</option>
+                @endforeach
+            </select>
+        @endif
+        <select name="etapa" class="border border-gray-300 rounded-md p-2 bg-white">
+            <option value="">Todas as etapas</option>
+            @foreach($etapas as $etapa)
+                <option value="{{ $etapa->id }}" @selected(($filtros['etapa'] ?? '') == $etapa->id)>{{ $etapa->nome }}</option>
+            @endforeach
+        </select>
+        <div class="flex gap-2 sm:col-span-2 lg:col-span-5 justify-end">
+            @if(array_filter($filtros))
+                <a href="{{ route('chamados.index') }}" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition">Limpar</a>
+            @endif
+            <x-button type="submit">Filtrar</x-button>
+        </div>
+    </form>
 
     @if($chamados->isEmpty())
         <div class="text-center py-10 text-gray-500">
@@ -73,6 +104,10 @@
                     @endforeach
                 </tbody>
             </table>
+        </div>
+
+        <div class="mt-6">
+            {{ $chamados->links() }}
         </div>
     @endif
 </div>

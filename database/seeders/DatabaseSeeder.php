@@ -17,6 +17,8 @@ class DatabaseSeeder extends Seeder
             EtapaSeeder::class,
             TipoChamadoSeeder::class,
             ClienteSeeder::class,
+            PrecoClienteSeeder::class,
+            PrazoSlaSeeder::class,
             UserSeeder::class,
         ]);
     }

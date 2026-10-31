@@ -106,7 +106,7 @@ class EmpresaEtapaHistoricoTest extends TestCase
             'cliente_id' => $this->empresaB->id,
             'tipo_chamado_id' => TipoChamado::first()->id,
             'descricao' => 'Tentando abrir para outra empresa.',
-        ])->assertRedirect(route('chamados.index'));
+        ])->assertRedirect(route('chamados.show', Chamado::first()));
 
         $chamado = Chamado::first();
         $this->assertSame($this->empresaA->id, $chamado->cliente_id);

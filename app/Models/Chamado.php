@@ -62,6 +62,24 @@ class Chamado extends Model
         return $this->hasMany(ChamadoHistoricoInterno::class)->latest()->orderByDesc('id');
     }
 
+    public function anexos(): HasMany
+    {
+        return $this->hasMany(ChamadoAnexo::class)->orderBy('id');
+    }
+
+    public function orcamentos(): HasMany
+    {
+        return $this->hasMany(Orcamento::class);
+    }
+
+    /**
+     * Orçamento vigente: o mais recente do chamado.
+     */
+    public function orcamento(): HasOne
+    {
+        return $this->hasOne(Orcamento::class)->latestOfMany();
+    }
+
     public function triagem(): HasOne
     {
         return $this->hasOne(ChamadoTriagem::class);

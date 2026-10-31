@@ -80,7 +80,7 @@ class TriagemSlaTest extends TestCase
             'tipo_chamado_id' => TipoChamado::first()->id,
             'descricao' => 'Relatório de vendas não abre desde ontem.',
             'criticidade_cliente' => 'Média',
-        ])->assertRedirect(route('chamados.index'));
+        ])->assertRedirect(route('chamados.show', Chamado::first()));
 
         $chamado = Chamado::first();
 
