@@ -5,7 +5,7 @@
 @section('content')
 <h1 class="text-2xl font-bold text-gray-800 mb-6">Painel de chamados</h1>
 
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
     @foreach($indicadores as $rotulo => $valor)
         <div class="bg-white p-4 rounded-lg shadow">
             <p class="text-sm text-gray-500">{{ $rotulo }}</p>
@@ -85,6 +85,7 @@
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prioridade</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tempo de atendimento</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prazo</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
@@ -100,6 +101,15 @@
                                 {{ \App\Services\SlaService::formatarDuracao($chamado->sla['liquido']) }}
                                 @if($chamado->sla['pausado'] > 0)
                                     <span class="text-gray-400">(+{{ \App\Services\SlaService::formatarDuracao($chamado->sla['pausado']) }} pausado)</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-sm whitespace-nowrap">
+                                @if(! $chamado->prazo)
+                                    <span class="text-gray-400">-</span>
+                                @elseif($chamado->prazo['atrasado'])
+                                    <span class="font-semibold text-red-700">Atrasado {{ \App\Services\SlaService::formatarDuracao(-$chamado->prazo['restante']) }}</span>
+                                @else
+                                    <span class="text-green-700">Restam {{ \App\Services\SlaService::formatarDuracao($chamado->prazo['restante']) }}</span>
                                 @endif
                             </td>
                         </tr>

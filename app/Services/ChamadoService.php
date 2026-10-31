@@ -3,39 +3,84 @@
 namespace App\Services;
 
 use App\Models\Chamado;
+use App\Models\ChamadoAnexo;
 use App\Models\ChamadoHistoricoInterno;
 use App\Models\Etapa;
 use App\Models\Status;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class ChamadoService
 {
-    public function __construct(private SlaService $sla)
-    {
+    public function __construct(
+        private SlaService $sla,
+        private AnexoService $anexos,
+        private OrcamentoService $orcamentos,
+    ) {
     }
 
     /**
-     * Abre o chamado no status ABERTO, na primeira etapa cadastrada, e registra o início do SLA.
+     * Abre o chamado no status ABERTO, na primeira etapa cadastrada, grava os anexos,
+     * registra o início do SLA e gera o pré-orçamento. Se qualquer passo falhar, nada fica gravado.
      *
      * @param  array{cliente_id: int, tipo_chamado_id: int, descricao: string, criticidade_cliente: ?string}  $dados
+     * @param  array<int, UploadedFile>  $anexos
      */
-    public function abrir(array $dados): Chamado
+    public function abrir(array $dados, array $anexos = []): Chamado
     {
-        return DB::transaction(function () use ($dados) {
-            $chamado = Chamado::create([
-                'cliente_id' => $dados['cliente_id'],
-                'tipo_chamado_id' => $dados['tipo_chamado_id'],
-                'status_id' => Status::where('descricao', 'ABERTO')->firstOrFail()->id,
-                'etapa_id' => Etapa::ordenadas()->value('id'),
-                'descricao' => $dados['descricao'],
-                'criticidade_cliente' => $dados['criticidade_cliente'] ?? null,
-                'aberto_em' => now(),
-            ]);
+        $chamadoId = null;
 
-            $this->sla->registrarAbertura($chamado);
+        try {
+            return DB::transaction(function () use ($dados, $anexos, &$chamadoId) {
+                $chamado = Chamado::create([
+                    'cliente_id' => $dados['cliente_id'],
+                    'tipo_chamado_id' => $dados['tipo_chamado_id'],
+                    'status_id' => Status::where('descricao', 'ABERTO')->firstOrFail()->id,
+                    'etapa_id' => Etapa::ordenadas()->value('id'),
+                    'descricao' => $dados['descricao'],
+                    'criticidade_cliente' => $dados['criticidade_cliente'] ?? null,
+                    'aberto_em' => now(),
+                ]);
+                $chamadoId = $chamado->id;
 
-            return $chamado;
+                $this->anexos->salvar($chamado, $anexos);
+                $this->sla->registrarAbertura($chamado);
+                $this->orcamentos->gerarPrevia($chamado);
+
+                return $chamado;
+            });
+        } catch (Throwable $erro) {
+            // A transação desfez os registros; sobram só os arquivos já gravados no disco.
+            if ($chamadoId !== null) {
+                Storage::disk(ChamadoAnexo::DISCO)->deleteDirectory('chamados/' . $chamadoId);
+            }
+
+            throw $erro;
+        }
+    }
+
+    /**
+     * @param  array{tipo_chamado_id: int, descricao: string, criticidade_cliente: ?string}  $dados
+     */
+    public function editar(Chamado $chamado, array $dados, User $autor): void
+    {
+        DB::transaction(function () use ($chamado, $dados, $autor) {
+            $chamado->fill($dados);
+
+            if (! $chamado->isDirty()) {
+                return;
+            }
+
+            $campos = collect(array_keys($chamado->getDirty()))
+                ->map(fn ($campo) => ['tipo_chamado_id' => 'tipo', 'descricao' => 'descrição', 'criticidade_cliente' => 'urgência'][$campo] ?? $campo)
+                ->implode(', ');
+
+            $chamado->save();
+
+            $this->registrarHistoricoInterno($chamado, $autor, "Chamado editado ({$campos}).");
         });
     }
 

@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Chamado;
+use App\Models\Orcamento;
 use App\Models\User;
 
 class ChamadoPolicy
@@ -31,5 +32,35 @@ class ChamadoPolicy
     public function cancelar(User $user, Chamado $chamado): bool
     {
         return $this->view($user, $chamado) && ! $chamado->estaEncerrado();
+    }
+
+    /**
+     * Quem vê o chamado pode enviar anexos enquanto ele estiver em aberto.
+     */
+    public function anexar(User $user, Chamado $chamado): bool
+    {
+        return $this->view($user, $chamado) && ! $chamado->estaEncerrado();
+    }
+
+    /**
+     * O admin vê qualquer orçamento; o cliente só depois que o Márcio envia.
+     */
+    public function verOrcamento(User $user, Chamado $chamado, Orcamento $orcamento): bool
+    {
+        if ((int) $orcamento->chamado_id !== $chamado->id || ! $this->view($user, $chamado)) {
+            return false;
+        }
+
+        return $user->isAdmin() || $orcamento->visivelParaCliente();
+    }
+
+    /**
+     * Aprovar ou recusar: o cliente da empresa, ou o admin registrando a resposta recebida por outro canal.
+     */
+    public function responderOrcamento(User $user, Chamado $chamado, Orcamento $orcamento): bool
+    {
+        return $this->verOrcamento($user, $chamado, $orcamento)
+            && $orcamento->status === Orcamento::ENVIADO
+            && ! $chamado->estaEncerrado();
     }
 }

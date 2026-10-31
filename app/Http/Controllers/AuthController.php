@@ -19,7 +19,8 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-        if (Auth::attempt($credentials)) {
+        // Usuário desativado no admin não entra, mesmo com a senha certa.
+        if (Auth::attempt($credentials + ['ativo' => true])) {
             $request->session()->regenerate();
             return redirect()->intended('/');
         }

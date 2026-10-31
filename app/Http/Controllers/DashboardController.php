@@ -14,7 +14,10 @@ class DashboardController extends Controller
         $emAberto = Chamado::with(['cliente', 'status', 'tipoChamado', 'triagem', 'historicosSla.status'])
             ->whereHas('status', fn ($query) => $query->whereNotIn('descricao', Status::ENCERRADOS))
             ->get()
-            ->each(fn (Chamado $chamado) => $chamado->sla = $sla->calcular($chamado));
+            ->each(function (Chamado $chamado) use ($sla) {
+                $chamado->sla = $sla->calcular($chamado);
+                $chamado->prazo = $sla->situacaoPrazo($chamado, $chamado->sla);
+            });
 
         $aguardandoTriagem = $emAberto
             ->whereNull('triagem')
@@ -37,6 +40,7 @@ class DashboardController extends Controller
             'Em aberto' => $emAberto->count(),
             'Aguardando triagem' => $aguardandoTriagem->count(),
             'Críticos' => $porPrioridade['Crítica'],
+            'Prazo estourado' => $fila->filter(fn ($chamado) => $chamado->prazo['atrasado'] ?? false)->count(),
             'Pendentes do cliente' => $emAberto->filter(fn ($chamado) => in_array($chamado->status->descricao, Status::PAUSA_SLA, true))->count(),
         ];
 

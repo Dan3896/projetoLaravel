@@ -16,9 +16,9 @@
         </div>
     @endif
 
-    <form action="{{ route('chamados.store') }}" method="POST">
+    <form action="{{ route('chamados.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
-        
+
         @if(auth()->user()->isAdmin())
             <div class="mb-4">
                 <label for="cliente_id" class="block text-gray-700 font-medium mb-2">Empresa</label>
@@ -51,9 +51,9 @@
         </div>
 
         <div class="mb-4">
-            <label for="criticidade_cliente" class="block text-gray-700 font-medium mb-2">Criticidade</label>
+            <label for="criticidade_cliente" class="block text-gray-700 font-medium mb-2">Urgência</label>
             <select name="criticidade_cliente" id="criticidade_cliente" class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2 bg-white">
-                <option value="">(Opcional) Selecione a criticidade...</option>
+                <option value="">(Opcional) Quão urgente é para você?</option>
                 <option value="Baixa" {{ old('criticidade_cliente') == 'Baixa' ? 'selected' : '' }}>Baixa</option>
                 <option value="Média" {{ old('criticidade_cliente') == 'Média' ? 'selected' : '' }}>Média</option>
                 <option value="Alta" {{ old('criticidade_cliente') == 'Alta' ? 'selected' : '' }}>Alta</option>
@@ -61,10 +61,15 @@
             </select>
         </div>
 
-        <div class="mb-6">
+        <div class="mb-4">
             <label for="descricao" class="block text-gray-700 font-medium mb-2">Descrição Detalhada</label>
-            <textarea name="descricao" id="descricao" rows="5" class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2" required placeholder="Descreva detalhadamente o problema ou solicitação...">{{ old('descricao') }}</textarea>
-            <p class="text-sm text-gray-500 mt-1">Mínimo de 10 caracteres.</p>
+            <textarea name="descricao" id="descricao" rows="5" minlength="20" class="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2" required placeholder="Descreva detalhadamente o problema ou solicitação...">{{ old('descricao') }}</textarea>
+            <p class="text-sm text-gray-500 mt-1">Mínimo de 20 caracteres.</p>
+        </div>
+
+        <div class="mb-6">
+            <label for="anexos" class="block text-gray-700 font-medium mb-2">Anexos (opcional)</label>
+            <x-campo-anexos />
         </div>
 
         <div class="flex justify-end">

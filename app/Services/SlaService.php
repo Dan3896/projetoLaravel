@@ -3,12 +3,17 @@
 namespace App\Services;
 
 use App\Models\Chamado;
+use App\Models\PrazoSla;
 use App\Models\Status;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class SlaService
 {
+    /** @var Collection<string, int>|null prazos em horas por prioridade, carregados uma vez por requisição */
+    private ?Collection $prazos = null;
+
     /**
      * Registra o status inicial do chamado no histórico de SLA.
      */
@@ -87,6 +92,34 @@ class SlaService
         }
 
         return ['liquido' => $liquido, 'pausado' => $pausado];
+    }
+
+    /**
+     * Prazo do chamado conforme a prioridade da triagem GUT (tabela prazos_sla).
+     * Retorna null enquanto o chamado não foi triado ou a prioridade não tem prazo cadastrado.
+     *
+     * @param  array{liquido: int, pausado: int}|null  $tempo  resultado de calcular(), para não recalcular
+     * @return array{horas: int, restante: int, atrasado: bool}|null
+     */
+    public function situacaoPrazo(Chamado $chamado, ?array $tempo = null): ?array
+    {
+        $chamado->loadMissing('triagem');
+
+        if (! $chamado->triagem) {
+            return null;
+        }
+
+        $this->prazos ??= PrazoSla::pluck('horas', 'prioridade');
+        $horas = $this->prazos[$chamado->triagem->prioridade()] ?? null;
+
+        if ($horas === null) {
+            return null;
+        }
+
+        $tempo ??= $this->calcular($chamado);
+        $restante = $horas * 3600 - $tempo['liquido'];
+
+        return ['horas' => (int) $horas, 'restante' => $restante, 'atrasado' => $restante < 0];
     }
 
     public static function formatarDuracao(int $segundos): string

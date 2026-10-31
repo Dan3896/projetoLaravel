@@ -62,4 +62,22 @@ class UserController extends Controller
             ->route('admin.usuarios.index')
             ->with('success', "Usuário {$usuario->name} atualizado.");
     }
+
+    /**
+     * Desativa ou reativa o acesso. Os chamados e o histórico do usuário continuam.
+     */
+    public function alternarAtivo(Request $request, User $usuario)
+    {
+        if ($usuario->is($request->user())) {
+            return redirect()
+                ->route('admin.usuarios.index')
+                ->with('error', 'Você não pode desativar o seu próprio usuário.');
+        }
+
+        $usuario->update(['ativo' => ! $usuario->ativo]);
+
+        return redirect()
+            ->route('admin.usuarios.index')
+            ->with('success', "Usuário {$usuario->name} " . ($usuario->ativo ? 'reativado.' : 'desativado.'));
+    }
 }

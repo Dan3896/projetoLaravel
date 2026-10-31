@@ -9,9 +9,18 @@
                 <li><a href="/chamados" class="text-gray-600 hover:text-blue-600">Listar OS</a></li>
                 <li><a href="/chamados/create" class="text-gray-600 hover:text-blue-600">Nova OS</a></li>
                 @role('admin')
-                    <li><a href="{{ route('admin.empresas.index') }}" class="text-gray-600 hover:text-blue-600">Empresas</a></li>
-                    <li><a href="{{ route('admin.etapas.index') }}" class="text-gray-600 hover:text-blue-600">Etapas</a></li>
-                    <li><a href="{{ route('admin.usuarios.index') }}" class="text-gray-600 hover:text-blue-600">Usuários</a></li>
+                    <li x-data="{ aberto: false }" class="relative" @click.outside="aberto = false" @keydown.escape="aberto = false">
+                        <button type="button" @click="aberto = ! aberto" :aria-expanded="aberto" class="text-gray-600 hover:text-blue-600">
+                            Cadastros &#9662;
+                        </button>
+                        <ul x-show="aberto" x-cloak class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-100 py-1 z-10">
+                            <li><a href="{{ route('admin.empresas.index') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-50">Empresas</a></li>
+                            <li><a href="{{ route('admin.usuarios.index') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-50">Usuários</a></li>
+                            <li><a href="{{ route('admin.etapas.index') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-50">Etapas</a></li>
+                            <li><a href="{{ route('admin.tipos-chamado.index') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-50">Tipos de chamado</a></li>
+                            <li><a href="{{ route('admin.prazos-sla.edit') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-50">Prazos de SLA</a></li>
+                        </ul>
+                    </li>
                 @endrole
                 <li>
                     <form method="POST" action="/logout" class="inline">

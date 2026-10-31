@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Cliente extends Model
 {
@@ -15,6 +16,11 @@ class Cliente extends Model
     public function chamados(): HasMany
     {
         return $this->hasMany(Chamado::class);
+    }
+
+    public function precoCliente(): HasOne
+    {
+        return $this->hasOne(PrecoCliente::class);
     }
 
     public function users(): HasMany

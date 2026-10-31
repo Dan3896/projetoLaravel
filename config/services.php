@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    // Serviço Node do bot de triagem. Ele se autentica na API com "Authorization: Bearer <token>".
+    'bot_triagem' => [
+        'token' => env('BOT_TRIAGEM_TOKEN'),
+    ],
+
 ];

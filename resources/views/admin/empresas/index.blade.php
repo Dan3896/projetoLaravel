@@ -18,6 +18,7 @@
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Perfil</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor-hora</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuários</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chamados</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
@@ -28,8 +29,15 @@
                         <tr class="hover:bg-gray-50 transition">
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{{ $empresa->nome_empresa }}</td>
                             <td class="px-6 py-4 text-sm text-gray-500">{{ $empresa->perfil ?? '-' }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ $empresa->precoCliente ? \App\Models\Orcamento::formatarMoeda($empresa->precoCliente->valor_hora) : '-' }}
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $empresa->users_count }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $empresa->chamados_count }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <a href="{{ route('chamados.index', ['empresa' => $empresa->id]) }}" class="text-indigo-600 hover:text-indigo-900">
+                                    {{ $empresa->chamados_count }} · ver histórico
+                                </a>
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <a href="{{ route('admin.empresas.edit', $empresa) }}" class="text-indigo-600 hover:text-indigo-900">Editar</a>
                             </td>
