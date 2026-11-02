@@ -8,6 +8,7 @@ use App\Models\Chamado;
 use App\Models\Orcamento;
 use App\Services\OrcamentoService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class OrcamentoController extends Controller
@@ -17,19 +18,17 @@ class OrcamentoController extends Controller
      */
     public function store(Chamado $chamado, OrcamentoService $orcamentoService)
     {
-        $orcamento = $chamado->orcamento && $chamado->orcamento->editavel()
-            ? $chamado->orcamento
-            : $orcamentoService->criar($chamado);
+        $orcamento = $orcamentoService->paraEdicao($chamado);
 
         return redirect()->route('chamados.orcamentos.edit', [$chamado, $orcamento]);
     }
 
     public function edit(Chamado $chamado, Orcamento $orcamento)
     {
-        if (! $orcamento->editavel()) {
+        if (! $orcamento->editavel() || $chamado->estaEncerrado()) {
             return redirect()
                 ->route('chamados.show', $chamado)
-                ->with('error', 'Este orçamento já foi enviado e não pode mais ser alterado.');
+                ->with('error', 'Este orçamento não pode mais ser alterado.');
         }
 
         $chamado->load(['cliente.precoCliente', 'tipoChamado']);
@@ -39,17 +38,24 @@ class OrcamentoController extends Controller
 
     public function update(OrcamentoRequest $request, Chamado $chamado, Orcamento $orcamento, OrcamentoService $orcamentoService)
     {
-        if (! $orcamento->editavel()) {
+        if (! $orcamento->editavel() || $chamado->estaEncerrado()) {
             return redirect()
                 ->route('chamados.show', $chamado)
-                ->with('error', 'Este orçamento já foi enviado e não pode mais ser alterado.');
+                ->with('error', 'Este orçamento não pode mais ser alterado.');
         }
 
-        $orcamentoService->atualizar($orcamento, $request->safe()->except('acao'));
+        $enviar = $request->validated('acao') === 'enviar';
 
-        if ($request->validated('acao') === 'enviar') {
-            $orcamentoService->enviar($orcamento, $request->user());
+        // Uma transação só: se o envio falhar (ordem cancelada no meio), o ajuste também não é gravado.
+        DB::transaction(function () use ($orcamentoService, $orcamento, $request, $enviar) {
+            $orcamentoService->atualizar($orcamento, $request->safe()->except('acao'));
 
+            if ($enviar) {
+                $orcamentoService->enviar($orcamento, $request->user());
+            }
+        });
+
+        if ($enviar) {
             return redirect()
                 ->route('chamados.show', $chamado)
                 ->with('success', 'Orçamento enviado ao cliente.');

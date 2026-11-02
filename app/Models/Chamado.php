@@ -90,6 +90,19 @@ class Chamado extends Model
         return $this->hasMany(HistoricoSla::class)->orderBy('registrado_em')->orderBy('id');
     }
 
+    /**
+     * Relê o chamado com SELECT ... FOR UPDATE. Use dentro de DB::transaction para serializar
+     * mudanças de estado (cancelar, triar, enviar/responder orçamento).
+     */
+    public function travar(): static
+    {
+        $atual = static::whereKey($this->getKey())->lockForUpdate()->firstOrFail();
+        $this->setRawAttributes($atual->getAttributes(), true);
+        $this->setRelations([]);
+
+        return $this;
+    }
+
     public function estaEncerrado(): bool
     {
         return in_array($this->status->descricao, Status::ENCERRADOS, true);

@@ -2,12 +2,12 @@
 
 namespace App\Services;
 
+use App\Exceptions\RegraNegocioException;
 use App\Models\Chamado;
 use App\Models\ChamadoHistoricoInterno;
 use App\Models\Orcamento;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use LogicException;
 
 class OrcamentoService
 {
@@ -61,42 +61,82 @@ class OrcamentoService
      */
     public function atualizar(Orcamento $orcamento, array $dados): void
     {
-        if (! $orcamento->editavel()) {
-            throw new LogicException('Só orçamentos pendentes ou recusados podem ser alterados.');
-        }
+        DB::transaction(function () use ($orcamento, $dados) {
+            $chamado = $orcamento->chamado->travar();
+            $orcamento->refresh();
 
-        $orcamento->fill($dados);
-        $orcamento->status = Orcamento::PENDENTE;
-        $orcamento->motivo_recusa = null;
-        $orcamento->valor_total = self::calcularTotal($orcamento);
-        $orcamento->save();
+            if ($chamado->estaEncerrado()) {
+                throw new RegraNegocioException('Ordem encerrada: o orçamento não pode mais ser alterado.');
+            }
+
+            if (! $orcamento->editavel()) {
+                throw new RegraNegocioException('Só orçamentos pendentes ou recusados podem ser alterados.');
+            }
+
+            $orcamento->fill($dados);
+            $orcamento->status = Orcamento::PENDENTE;
+            $orcamento->motivo_recusa = null;
+            $orcamento->valor_total = self::calcularTotal($orcamento);
+            $orcamento->save();
+        });
+    }
+
+    /**
+     * Devolve o orçamento que o Márcio pode editar: o vigente, se ainda editável, ou um novo.
+     * Recusa ordens encerradas (a checagem é feita sob trava, para não disputar com o cancelamento).
+     */
+    public function paraEdicao(Chamado $chamado): Orcamento
+    {
+        return DB::transaction(function () use ($chamado) {
+            $chamado->travar();
+
+            if ($chamado->estaEncerrado()) {
+                throw new RegraNegocioException('Ordem encerrada: o orçamento não pode mais ser alterado.');
+            }
+
+            return $chamado->orcamento?->editavel() ? $chamado->orcamento : $this->criar($chamado);
+        });
     }
 
     public function enviar(Orcamento $orcamento, User $autor): void
     {
-        if (! $orcamento->editavel()) {
-            throw new LogicException('Este orçamento já foi enviado.');
-        }
-
         DB::transaction(function () use ($orcamento, $autor) {
+            $chamado = $orcamento->chamado->travar();
+            $orcamento->refresh();
+
+            if ($chamado->estaEncerrado()) {
+                throw new RegraNegocioException('Ordem encerrada: o orçamento não pode mais ser enviado.');
+            }
+
+            if (! $orcamento->editavel()) {
+                throw new RegraNegocioException('Este orçamento já foi enviado.');
+            }
+
             $orcamento->update([
                 'status' => Orcamento::ENVIADO,
                 'enviado_em' => now(),
                 'respondido_em' => null,
             ]);
 
-            $this->sla->mudarStatus($orcamento->chamado, 'ORCAMENTO_GERADO');
+            $this->sla->mudarStatus($chamado, 'ORCAMENTO_GERADO');
             $this->registrar($orcamento, $autor, 'Orçamento enviado ao cliente: ' . Orcamento::formatarMoeda($orcamento->valor_total) . '.');
         });
     }
 
     public function responder(Orcamento $orcamento, bool $aprovado, User $autor, ?string $motivo = null): void
     {
-        if ($orcamento->status !== Orcamento::ENVIADO) {
-            throw new LogicException('Só orçamentos enviados podem ser aprovados ou recusados.');
-        }
-
         DB::transaction(function () use ($orcamento, $aprovado, $autor, $motivo) {
+            $chamado = $orcamento->chamado->travar();
+            $orcamento->refresh();
+
+            if ($orcamento->status !== Orcamento::ENVIADO) {
+                throw new RegraNegocioException('Este orçamento já foi respondido.');
+            }
+
+            if ($chamado->estaEncerrado()) {
+                throw new RegraNegocioException('Ordem encerrada: o orçamento não pode mais ser respondido.');
+            }
+
             $orcamento->update([
                 'status' => $aprovado ? Orcamento::APROVADO : Orcamento::RECUSADO,
                 'motivo_recusa' => $aprovado ? null : $motivo,
@@ -106,7 +146,7 @@ class OrcamentoService
             $quem = $autor->isAdmin() ? 'pela equipe' : 'pelo cliente';
 
             if ($aprovado) {
-                $this->sla->mudarStatus($orcamento->chamado, 'APROVADO');
+                $this->sla->mudarStatus($chamado, 'APROVADO');
                 $this->registrar($orcamento, $autor, "Orçamento aprovado {$quem}.");
             } else {
                 $this->registrar($orcamento, $autor, "Orçamento recusado {$quem}." . ($motivo ? " Motivo: {$motivo}" : ''));

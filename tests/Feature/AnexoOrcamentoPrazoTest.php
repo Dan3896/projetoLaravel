@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Exceptions\RegraNegocioException;
 use App\Models\Chamado;
 use App\Models\ChamadoAnexo;
 use App\Models\Cliente;
@@ -96,7 +97,7 @@ class AnexoOrcamentoPrazoTest extends TestCase
     {
         $this->actingAs($this->clienteDe($this->empresaA))->post('/chamados', $this->dadosAbertura([
             'anexos' => [
-                UploadedFile::fake()->image('erro.png'),
+                UploadedFile::fake()->create('erro.png', 10, 'image/png'),
                 UploadedFile::fake()->create('sistema.log', 20, 'text/plain'),
             ],
         ]))->assertSessionHasNoErrors();
@@ -143,7 +144,7 @@ class AnexoOrcamentoPrazoTest extends TestCase
             ->andThrow(new RuntimeException('falha simulada'));
 
         try {
-            $this->chamadoDe($this->empresaA, [UploadedFile::fake()->image('erro.png')]);
+            $this->chamadoDe($this->empresaA, [UploadedFile::fake()->create('erro.png', 10, 'image/png')]);
             $this->fail('A abertura deveria ter falhado.');
         } catch (RuntimeException $erro) {
             $this->assertSame('falha simulada', $erro->getMessage());
@@ -171,7 +172,7 @@ class AnexoOrcamentoPrazoTest extends TestCase
 
     public function test_anexo_de_outro_chamado_nao_e_encontrado_pela_url(): void
     {
-        $chamado = $this->chamadoDe($this->empresaA, [UploadedFile::fake()->image('a.png')]);
+        $chamado = $this->chamadoDe($this->empresaA, [UploadedFile::fake()->create('a.png', 10, 'image/png')]);
         $outro = $this->chamadoDe($this->empresaA);
 
         $this->actingAs($this->admin())
@@ -185,7 +186,7 @@ class AnexoOrcamentoPrazoTest extends TestCase
         $cliente = $this->clienteDe($this->empresaA);
 
         $this->actingAs($cliente)
-            ->post(route('chamados.anexos.store', $chamado), ['anexos' => [UploadedFile::fake()->image('tela.jpg')]])
+            ->post(route('chamados.anexos.store', $chamado), ['anexos' => [UploadedFile::fake()->create('tela.jpg', 10, 'image/jpeg')]])
             ->assertRedirect(route('chamados.show', $chamado));
 
         $anexo = $chamado->anexos()->firstOrFail();
@@ -202,7 +203,7 @@ class AnexoOrcamentoPrazoTest extends TestCase
         $chamado = $this->chamadoDe($this->empresaA);
 
         $this->actingAs($this->clienteDe($this->empresaB))
-            ->post(route('chamados.anexos.store', $chamado), ['anexos' => [UploadedFile::fake()->image('tela.jpg')]])
+            ->post(route('chamados.anexos.store', $chamado), ['anexos' => [UploadedFile::fake()->create('tela.jpg', 10, 'image/jpeg')]])
             ->assertForbidden();
     }
 
@@ -312,6 +313,103 @@ class AnexoOrcamentoPrazoTest extends TestCase
             ->assertForbidden();
 
         $this->assertSame(Orcamento::ENVIADO, $orcamento->fresh()->status);
+    }
+
+    public function test_nao_envia_orcamento_de_ordem_cancelada(): void
+    {
+        $admin = $this->admin();
+        $chamado = $this->chamadoDe($this->empresaA);
+        $orcamento = app(OrcamentoService::class)->criar($chamado);
+
+        // O cliente cancela enquanto o admin está na tela do orçamento.
+        app(ChamadoService::class)->cancelar($chamado, $this->clienteDe($this->empresaA));
+
+        $this->actingAs($admin)->put(route('chamados.orcamentos.update', [$chamado, $orcamento]), [
+            'valor_hora' => 200,
+            'horas_planejamento' => 1,
+            'horas_desenvolvimento' => 4,
+            'horas_qa' => 1.5,
+            'acao' => 'enviar',
+        ])->assertRedirect()->assertSessionHas('error');
+
+        $chamado->refresh();
+        $this->assertSame('CANCELADO', $chamado->status->descricao);
+        $this->assertNotNull($chamado->fechado_em);
+        $this->assertSame(Orcamento::PENDENTE, $orcamento->fresh()->status);
+        $this->assertEquals(0, (float) $orcamento->fresh()->valor_hora);
+    }
+
+    public function test_service_recusa_enviar_orcamento_de_ordem_cancelada_mesmo_com_instancia_desatualizada(): void
+    {
+        $admin = $this->admin();
+        $chamado = $this->chamadoDe($this->empresaA);
+        $orcamento = app(OrcamentoService::class)->criar($chamado);
+        $desatualizado = Orcamento::findOrFail($orcamento->id);
+        $desatualizado->chamado->status; // carrega o status antigo na instância
+
+        app(ChamadoService::class)->cancelar($chamado, $admin);
+
+        try {
+            app(OrcamentoService::class)->enviar($desatualizado, $admin);
+            $this->fail('O envio deveria ter sido recusado.');
+        } catch (RegraNegocioException $erro) {
+            $this->assertStringContainsString('encerrada', $erro->getMessage());
+        }
+
+        $this->assertSame('CANCELADO', $chamado->fresh()->status->descricao);
+        $this->assertNotNull($chamado->fresh()->fechado_em);
+        $this->assertSame(Orcamento::PENDENTE, $orcamento->fresh()->status);
+    }
+
+    public function test_nao_cria_orcamento_para_ordem_cancelada(): void
+    {
+        $admin = $this->admin();
+
+        // Sem orçamento prévio.
+        $semOrcamento = $this->chamadoDe($this->empresaA);
+        app(ChamadoService::class)->cancelar($semOrcamento, $admin);
+
+        $this->actingAs($admin)
+            ->post(route('chamados.orcamentos.store', $semOrcamento))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+        $this->assertSame(0, $semOrcamento->orcamentos()->count());
+
+        // Com orçamento já enviado.
+        $comEnviado = $this->chamadoDe($this->empresaA);
+        $enviado = app(OrcamentoService::class)->criar($comEnviado);
+        app(OrcamentoService::class)->enviar($enviado, $admin);
+        app(ChamadoService::class)->cancelar($comEnviado, $admin);
+
+        $this->actingAs($admin)
+            ->post(route('chamados.orcamentos.store', $comEnviado))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+        $this->assertSame(1, $comEnviado->orcamentos()->count());
+    }
+
+    public function test_resposta_dupla_do_orcamento_e_recusada(): void
+    {
+        $admin = $this->admin();
+        $chamado = $this->chamadoDe($this->empresaA);
+        $orcamento = app(OrcamentoService::class)->criar($chamado);
+        app(OrcamentoService::class)->enviar($orcamento, $admin);
+
+        $primeira = Orcamento::findOrFail($orcamento->id);
+        $segunda = Orcamento::findOrFail($orcamento->id); // ainda "enviado" na memória
+
+        app(OrcamentoService::class)->responder($primeira, true, $admin);
+
+        try {
+            app(OrcamentoService::class)->responder($segunda, false, $admin, 'Caro demais.');
+            $this->fail('A segunda resposta deveria ter sido recusada.');
+        } catch (RegraNegocioException $erro) {
+            $this->assertSame('Este orçamento já foi respondido.', $erro->getMessage());
+        }
+
+        $this->assertSame(Orcamento::APROVADO, $orcamento->fresh()->status);
+        $this->assertNull($orcamento->fresh()->motivo_recusa);
+        $this->assertSame('APROVADO', $chamado->fresh()->status->descricao);
     }
 
     public function test_pdf_do_orcamento(): void
