@@ -12,3 +12,10 @@
 }
 
 [x-cloak] { display: none !important; }
+
+@layer base {
+    button:disabled {
+        cursor: wait;
+        opacity: 0.6;
+    }
+}
