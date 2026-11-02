@@ -125,6 +125,9 @@ Decisão de fluxo: o **cliente** informa só a urgência (`criticidade_cliente`)
 - [ ] Layout responsivo (mobile-first) revisado em todas as telas
 - [x] Bloquear upload de executáveis (`.php`, `.sh`, `.exe`): só as extensões e tipos MIME da lista passam
 - [x] Rollback completo se a gravação de anexos ou do orçamento falhar (a transação desfaz o banco e os arquivos gravados são apagados)
+- [x] Limite de tentativas no login (5 erros por e-mail + IP; depois espera até 60 s)
+- [x] Proteção contra envio duplo: botão com loading/spinner no navegador (`resources/js/submit-loading.js`) e trava do chamado no servidor (`Chamado::travar()`) em cancelar, triagem e orçamento
+- [x] Orçamento não pode ser criado, enviado nem respondido em ordem encerrada (`RegraNegocioException` vira mensagem de erro na tela)
 - [ ] Proteção de dados conforme a LGPD (tarefa do Rafael, etapa 5)
 - [ ] Deploy em produção/homologação com HTTPS
 
