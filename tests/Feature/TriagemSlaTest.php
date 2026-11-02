@@ -12,7 +12,9 @@ use App\Services\TriagemService;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\StatusSeeder;
 use Database\Seeders\TipoChamadoSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
@@ -140,6 +142,18 @@ class TriagemSlaTest extends TestCase
 
         $this->assertDatabaseCount('chamado_triagens', 1);
         $this->assertSame(125, $chamado->fresh()->triagem->pontuacao);
+    }
+
+    public function test_banco_nao_aceita_segunda_triagem_para_o_mesmo_chamado(): void
+    {
+        $chamado = $this->abrirChamado();
+        $linha = ['chamado_id' => $chamado->id, 'gut_gravidade' => 3, 'gut_urgencia' => 3, 'gut_tendencia' => 3, 'pontuacao' => 27];
+
+        DB::table('chamado_triagens')->insert($linha);
+
+        $this->expectException(QueryException::class);
+
+        DB::table('chamado_triagens')->insert($linha);
     }
 
     public function test_triagem_valida_notas_de_1_a_5(): void

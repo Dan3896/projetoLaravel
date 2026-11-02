@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Exceptions\RegraNegocioException;
 use App\Models\Chamado;
 use App\Models\Cliente;
 use App\Models\Etapa;
@@ -350,6 +351,25 @@ class EmpresaEtapaHistoricoTest extends TestCase
 
         $this->actingAs($cliente)->post(route('chamados.cancelar', $chamado));
         $this->actingAs($cliente)->post(route('chamados.cancelar', $chamado))->assertForbidden();
+
+        $this->assertCount(1, $chamado->fresh()->historicosInternos);
+    }
+
+    public function test_cancelamento_duplicado_com_instancia_desatualizada_e_rejeitado(): void
+    {
+        $chamado = $this->chamadoDe($this->empresaA);
+        $admin = $this->admin();
+        $c1 = Chamado::find($chamado->id);
+        $c2 = Chamado::find($chamado->id);
+
+        app(ChamadoService::class)->cancelar($c1, $admin);
+
+        try {
+            app(ChamadoService::class)->cancelar($c2, $admin);
+            $this->fail('O segundo cancelamento deveria lançar RegraNegocioException.');
+        } catch (RegraNegocioException $erro) {
+            $this->assertSame('Esta ordem já está encerrada.', $erro->getMessage());
+        }
 
         $this->assertCount(1, $chamado->fresh()->historicosInternos);
     }
