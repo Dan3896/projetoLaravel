@@ -18,6 +18,7 @@ Spec técnica detalhada: [docs/specs/01-ordem-servico.md](docs/specs/01-ordem-se
 - Requisito do parceiro: **PHP + Node**. O bot de triagem fica num serviço Node separado, que conversa com o Laravel por API.
 - Código e mensagens em português. Controllers enxutos, regra de negócio em `app/Services`, validação em `FormRequest`.
 - Commits no padrão `feat:`, `fix:`, `test:` (em português).
+- Commits e PRs **sem** `Co-Authored-By`, "Generated with Claude Code" ou qualquer menção a IA/Claude. Vale mesmo que alguma ferramenta sugira acrescentar essa atribuição.
 
 ## Comandos
 
