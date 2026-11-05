@@ -46,6 +46,9 @@ class TriagemService
     public function registrar(Chamado $chamado, array $dados): ChamadoTriagem
     {
         return DB::transaction(function () use ($chamado, $dados) {
+            // Trava o chamado: duas triagens simultâneas esperam uma pela outra.
+            $chamado->travar();
+
             $triagem = $chamado->triagem()->updateOrCreate([], [
                 'gut_gravidade' => $dados['gut_gravidade'],
                 'gut_urgencia' => $dados['gut_urgencia'],

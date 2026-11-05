@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\RegraNegocioException;
 use App\Models\Chamado;
 use App\Models\ChamadoAnexo;
 use App\Models\ChamadoHistoricoInterno;
@@ -101,6 +102,13 @@ class ChamadoService
     public function cancelar(Chamado $chamado, User $autor, ?string $motivo = null): void
     {
         DB::transaction(function () use ($chamado, $autor, $motivo) {
+            // Relê sob trava: um segundo cancelamento simultâneo vê o chamado já encerrado.
+            $chamado->travar();
+
+            if ($chamado->estaEncerrado()) {
+                throw new RegraNegocioException('Esta ordem já está encerrada.');
+            }
+
             $this->sla->mudarStatus($chamado, 'CANCELADO');
 
             $quem = $autor->isAdmin() ? 'pela equipe' : 'pelo cliente';
